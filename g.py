@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 #usage: g <search>
 # or just 'g' to enter interactive mode
 # use 'help' while in interactive mode to edit settings
