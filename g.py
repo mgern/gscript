@@ -19,8 +19,8 @@ with open(config_path + "settings.json", 'r') as file:
 
 # print(json_data)
 # Extract values into Python variables
-file_path = json_data["file_path"]
-file_path = os.path.expanduser(file_path)
+hosts_file_path = json_data["hosts_file_path"]
+hosts_file_path = os.path.expanduser(hosts_file_path)
 wildcard_character = json_data["wildcard_character"]
 max_results = json_data["max_results"]
 ssh_pre_options = json_data["ssh_pre_options"]
@@ -34,7 +34,7 @@ def get_search_results(query):
     regex_pattern = ".*" + query.replace(wildcard_character, '.*') + ".*"
     # print(regex_pattern) #testing
 
-    with open(file_path, 'r') as file:
+    with open(hosts_file_path, 'r') as file:
         for line in file:
             #read current line for hostname and ip
             #if line starts with # (comment) skip to the next

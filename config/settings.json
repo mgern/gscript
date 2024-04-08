@@ -1,6 +1,6 @@
 {
     "lastsearch": "",
-    "file_path": "~/gscript/hosts",
+    "hosts_file_path": "~/gscript/hosts",
     "wildcard_character": "/",
     "max_results": 25,
     "ssh_pre_options": "ct",
