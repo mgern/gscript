@@ -28,6 +28,11 @@ ssh_post_options = json_data["ssh_post_options"]
 #needs to be global cause its used everywhere
 command=""
 
+##
+# input "ew/sw"
+# With a string query -> read the hosts file and populate results[]
+# returns array of [[hostname,ip],[hostname2,ip2],etc]
+##
 def get_search_results(query):
     results = []
     regex_pattern = ".*" + query.replace(wildcard_character, '.*') + ".*"
@@ -44,20 +49,15 @@ def get_search_results(query):
             elif line == "":
                 pass
             else:
-                hostname, ip = line.split()
-                # print(hostname)
-                #if the current line matches on the query, add it to the results list
-                #if the query has slashes '/' in it, treat them like a wildcard. So '/' = wildcard. Use Regex
-
-                
-                
+                hostname, ip = line.split()                
+                #if current line matches regex, add the fields to results[]
                 if re.match(regex_pattern, hostname, re.IGNORECASE):
                     results.append([hostname, ip])
-
     return results
-#define a 2d array of search results
-#[hostname, ip]
 
+##
+# Interactively spawn ssh session on ip)
+##
 def execute_ssh(ip):
     sshcommand = "ssh"
     #add optional command options to ssh if wanted
@@ -66,10 +66,20 @@ def execute_ssh(ip):
     if ssh_post_options != "":
         sshcommand = sshcommand + " " + ssh_post_options
     sshcommand += " " + ip
-
     subprocess.run(sshcommand, shell=True)
 
-def print_nicely(results):
+
+##
+# just print 'max_results' worth of results, with page count too 
+# For example if there are 70 search results currently in results[]:
+# if page = 0:
+#   prints [0-24] of 70 results
+# if page = 1:
+#   prints [25-50] of 70 results
+# and so on...
+#
+##
+def print_nicely(results, page):
     hostnames = [pair for pair in results]
     formatted_hostnames = [f"{i+1}) {hostname[0]}  \t({hostname[1]})" for i, hostname in enumerate(hostnames)]
 
@@ -83,33 +93,15 @@ def print_nicely(results):
     # else:
     current_page = 0
     total_pages = -(-len(formatted_hostnames) // max_results)
-    while True:
-        print('\n'.join(formatted_hostnames[current_page * max_results: (current_page + 1) * max_results]))
-        print(f"Page {current_page + 1}/{total_pages}")
-        user_input = input("Press 'q' to quit, 'n' for next page: ")
-        if user_input.lower() == 'q':
-            break
-        elif user_input.lower() == 'n':
-            current_page = (current_page + 1) % total_pages
-        elif user_input.lower().startswith("g "):
-            global command 
-            command = user_input
-            break
-        #if input is a number, choose from the search results and spawn ssh
-        elif re.match("(\d){1,2}", user_input): #regex
-            #spawn ssh session now of that selection
-            choice = int(user_input)
-            if 0 <= choice <= len(results):
-                execute_ssh(results[choice-1][1])
-                
-            
-        else:
-            print("Invalid input. Please press 'q' to quit or 'n' for next page.")        
+    print('\n'.join(formatted_hostnames[current_page * max_results: (current_page + 1) * max_results]))
+    print(f"Page {current_page + 1}/{total_pages}")
+    # user_input = input("Press 'q' to quit, 'n' for next page: ")
     return
 
 def interactive_mode():
     last=""
     results=[]
+    page_number = 0
     global command
     # print(sys.argv)
     #if this script was called without args, display last results.
@@ -159,7 +151,9 @@ def interactive_mode():
         if command.startswith("g "):
             command = input("Enter command: ")
         print_nicely(results)
-        
+
+        command = input("Press 'q' to quit, 'n' for next page: ")
+
         # # debugging
         # print("Last is: "+last )
         # print("Cmmd is: "+command )
