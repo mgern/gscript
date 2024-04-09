@@ -8,13 +8,12 @@ import re
 import json
 import os
 #python doesnt interpret '~', bash does that. not python
-config_path ="~/gscript/config/"
-config_path = os.path.expanduser(config_path)
+config_path ="settings.json"
 
 
 #TODO prompt the user if the file doesnt exist and do whole new settings setup
 # Read JSON data from file
-with open(config_path + "settings.json", 'r') as file:
+with open(os.path.dirname(__file__)+ "/" + config_path, 'r') as file:
     json_data = json.load(file)
 
 # print(json_data)

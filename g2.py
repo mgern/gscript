@@ -8,13 +8,12 @@ import re
 import json
 import os
 #python doesnt interpret '~', bash does that. not python
-config_path ="~/gscript/config/"
-config_path = os.path.expanduser(config_path)
+config_path ="settings.json"
 
 
 #TODO prompt the user if the file doesnt exist and do whole new settings setup
 # Read JSON data from file
-with open(config_path + "settings.json", 'r') as file:
+with open(os.path.dirname(__file__)+ "/" + config_path, 'r') as file:
     json_data = json.load(file)
 
 # print(json_data)
@@ -59,6 +58,17 @@ def get_search_results(query):
 #define a 2d array of search results
 #[hostname, ip]
 
+def execute_ssh(ip):
+    sshcommand = "ssh"
+    #add optional command options to ssh if wanted
+    if ssh_pre_options != "":
+        sshcommand = ssh_pre_options + " " + sshcommand
+    if ssh_post_options != "":
+        sshcommand = sshcommand + " " + ssh_post_options
+    sshcommand += " " + ip
+
+    subprocess.run(sshcommand, shell=True)
+
 def print_nicely(results):
     hostnames = [pair for pair in results]
     formatted_hostnames = [f"{i+1}) {hostname[0]}  \t({hostname[1]})" for i, hostname in enumerate(hostnames)]
@@ -90,16 +100,8 @@ def print_nicely(results):
             #spawn ssh session now of that selection
             choice = int(user_input)
             if 0 <= choice <= len(results):
-                ip = results[choice-1][1]
-                sshcommand = "ssh"
-                #add optional command options to ssh if wanted
-                if ssh_pre_options != "":
-                    sshcommand = ssh_pre_options + " " + sshcommand
-                if ssh_post_options != "":
-                    sshcommand = sshcommand + " " + ssh_post_options
-                sshcommand += " " + ip
-
-                subprocess.run(sshcommand, shell=True)
+                execute_ssh(results[choice-1][1])
+                
             
         else:
             print("Invalid input. Please press 'q' to quit or 'n' for next page.")        
