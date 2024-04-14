@@ -18,8 +18,8 @@ with open(os.path.dirname(__file__)+ "/" + config_path, 'r') as file:
 
 # print(json_data)
 # Extract values into Python variables
-hosts_file_path = json_data["hosts_file_path"]
-hosts_file_path = os.path.expanduser(hosts_file_path)
+hosts_file_path = os.path.expanduser(json_data["hosts_file_path"])
+last_search = json_data["lastsearch"]
 wildcard_character = json_data["wildcard_character"]
 max_results = json_data["max_results"]
 ssh_pre_options = json_data["ssh_pre_options"]

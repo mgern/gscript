@@ -6,6 +6,7 @@ import subprocess
 import sys
 import re
 import json
+import math
 import os
 #python doesnt interpret '~', bash does that. not python
 config_path ="settings.json"
@@ -18,16 +19,16 @@ with open(os.path.dirname(__file__)+ "/" + config_path, 'r') as file:
 
 # print(json_data)
 # Extract values into Python variables
-hosts_file_path = json_data["hosts_file_path"]
-hosts_file_path = os.path.expanduser(hosts_file_path)
+hosts_file_path = os.path.expanduser(json_data["hosts_file_path"])
+last_search = json_data["lastsearch"]
 wildcard_character = json_data["wildcard_character"]
 max_results = json_data["max_results"]
 ssh_pre_options = json_data["ssh_pre_options"]
 ssh_post_options = json_data["ssh_post_options"]
 
 #needs to be global cause its used everywhere
-command=""
-
+command=last_search
+pagenumber = 0
 ##
 # input "ew/sw"
 # With a string query -> read the hosts file and populate results[]
@@ -80,44 +81,46 @@ def execute_ssh(ip):
 #
 ##
 def print_nicely(results, page):
-    hostnames = [pair for pair in results]
-    formatted_hostnames = [f"{i+1}) {hostname[0]}  \t({hostname[1]})" for i, hostname in enumerate(hostnames)]
+    hosts = [pair for pair in results]
+    formatted_hostnames = [f"{i+1}) {host[0]}  \t({host[1]})" for i, host in enumerate(hosts)]
+    #example output:
+    # 1) EWL4SW2160   (127.0.0.1)
+    # 2) EWL12SW5300  (127.0.0.1)
+    # 3) EWA2SW7700   (127.0.0.1)
+    # 4) EWM6SW3540   (127.0.0.1)
 
-    #print the options to terminal
-    #paginate the output if the results are above max_results
-    # if len(hostnames) <= max_results:
-    #     #dont paginate, just print them all
-    #     for formatted_hostname in formatted_hostnames:
-    #         print(formatted_hostname)
-        
-    # else:
-    current_page = 0
     total_pages = -(-len(formatted_hostnames) // max_results)
-    print('\n'.join(formatted_hostnames[current_page * max_results: (current_page + 1) * max_results]))
-    print(f"Page {current_page + 1}/{total_pages}")
+    print('\n'.join(formatted_hostnames[page * max_results: (page + 1) * max_results]))
+    print(f"Page {page + 1}/{total_pages}")
     # user_input = input("Press 'q' to quit, 'n' for next page: ")
     return
 
 def interactive_mode():
     last=""
     results=[]
-    page_number = 0
+    pagenumber, max_pages = 0, 0
     global command
+    skip_first_go = False
     # print(sys.argv)
     #if this script was called without args, display last results.
     #otherwise start search with arg provided
     if len(sys.argv) == 1:
-        # Display last results
-        #TODO
-        # command="last"
-        pass
+        command = last_search
+        print("Searching last query:")
     else:
         command = sys.argv[1]
+    results = get_search_results(command)
+    print_nicely(results, pagenumber)
     
     while True:
-        if command == 'help':
-            # Edit settings here
-            pass
+        command = input("Press 'q' to quit, 'n' for next page: ")#TODO, Make this print fun messages
+        max_pages = math.ceil(len(results) / max_results)
+        print(max_pages)
+        if command.lower() == 'n' or command == "":
+            if pagenumber > max_pages:
+                pagenumber = 0
+            else:
+                pagenumber+=1
 
         elif command.lower().startswith("g "):
             last = ""
@@ -128,13 +131,6 @@ def interactive_mode():
         elif command == 'q':
             exit()
         
-        
-
-        elif command == "last": #regex
-            #print last results
-            print("Printing last search")
-            pass
-
         else:
             #refine search further
             if last != "":
@@ -147,12 +143,9 @@ def interactive_mode():
             last = last+"/"+command
         else:
             last = command
-        #optional: cap the amount of results to a certain number
-        if command.startswith("g "):
-            command = input("Enter command: ")
-        print_nicely(results)
 
-        command = input("Press 'q' to quit, 'n' for next page: ")
+        print_nicely(results, pagenumber)
+
 
         # # debugging
         # print("Last is: "+last )
