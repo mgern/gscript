@@ -100,7 +100,6 @@ def interactive_mode():
     results=[]
     pagenumber, max_pages = 0, 0
     global command
-    skip_first_go = False
     # print(sys.argv)
     #if this script was called without args, display last results.
     #otherwise start search with arg provided
@@ -115,9 +114,9 @@ def interactive_mode():
     while True:
         command = input("Press 'q' to quit, 'n' for next page: ")#TODO, Make this print fun messages
         max_pages = math.ceil(len(results) / max_results)
-        print(max_pages)
+        print(str(pagenumber) +" / "+ str(max_pages))
         if command.lower() == 'n' or command == "":
-            if pagenumber > max_pages:
+            if pagenumber+1 >= max_pages:
                 pagenumber = 0
             else:
                 pagenumber+=1
