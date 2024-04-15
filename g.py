@@ -6,6 +6,7 @@ import subprocess
 import sys
 import re
 import json
+import math
 import os
 #python doesnt interpret '~', bash does that. not python
 config_path ="settings.json"
@@ -26,8 +27,13 @@ ssh_pre_options = json_data["ssh_pre_options"]
 ssh_post_options = json_data["ssh_post_options"]
 
 #needs to be global cause its used everywhere
-command=""
-
+command=last_search
+pagenumber = 0
+##
+# input "ew/sw"
+# With a string query -> read the hosts file and populate results[]
+# returns array of [[hostname,ip],[hostname2,ip2],etc]
+##
 def get_search_results(query):
     results = []
     regex_pattern = ".*" + query.replace(wildcard_character, '.*') + ".*"
@@ -44,50 +50,107 @@ def get_search_results(query):
             elif line == "":
                 pass
             else:
-                hostname, ip = line.split()
-                # print(hostname)
-                #if the current line matches on the query, add it to the results list
-                #if the query has slashes '/' in it, treat them like a wildcard. So '/' = wildcard. Use Regex
-
-                
-                
+                hostname, ip = line.split()                
+                #if current line matches regex, add the fields to results[]
                 if re.match(regex_pattern, hostname, re.IGNORECASE):
                     results.append([hostname, ip])
-
     return results
-#define a 2d array of search results
-#[hostname, ip]
 
-def print_nicely(results):
-    hostnames = [pair for pair in results]
-    formatted_hostnames = [f"{i+1}) {hostname[0]}  \t({hostname[1]})" for i, hostname in enumerate(hostnames)]
+##
+# Interactively spawn ssh session on ip)
+##
+def execute_ssh(ip):
+    sshcommand = "ssh"
+    #add optional command options to ssh if wanted
+    if ssh_pre_options != "":
+        sshcommand = ssh_pre_options + " " + sshcommand
+    if ssh_post_options != "":
+        sshcommand = sshcommand + " " + ssh_post_options
+    sshcommand += " " + ip
+    subprocess.run(sshcommand, shell=True)
 
-    #print the options to terminal
-    #paginate the output if the results are above max_results
-    # if len(hostnames) <= max_results:
-    #     #dont paginate, just print them all
-    #     for formatted_hostname in formatted_hostnames:
-    #         print(formatted_hostname)
-        
-    # else:
-    current_page = 0
+#
+# Save the query to settings.json[lastsearch]
+# So the next time you use G it prints the last search
+#
+def save_last_search(query):
+    try:
+            with open(config_path, 'r') as file:
+                settings = json.load(file)
+    except FileNotFoundError:
+        settings = {}
+
+    # Update the settings with the new last_search query
+    settings['lastsearch'] = query
+
+    # Save the updated settings back to settings.json
+    with open('settings.json', 'w') as file:
+        json.dump(settings, file)
+
+##
+# just print 'max_results' worth of results, with page count too 
+# For example if there are 70 search results currently in results[]:
+# if page = 0:
+#   prints [0-24] of 70 results
+# if page = 1:
+#   prints [25-50] of 70 results
+# and so on...
+#
+##
+def print_nicely(results, page):
+    hosts = [pair for pair in results]
+    formatted_hostnames = [f"{i+1}) {host[0]}  \t({host[1]})" for i, host in enumerate(hosts)]
+    #example output:
+    # 1) EWL4SW2160   (127.0.0.1)
+    # 2) EWL12SW5300  (127.0.0.1)
+    # 3) EWA2SW7700   (127.0.0.1)
+    # 4) EWM6SW3540   (127.0.0.1)
+
     total_pages = -(-len(formatted_hostnames) // max_results)
+    print('\n'.join(formatted_hostnames[page * max_results: (page + 1) * max_results]))
+    print(f"Page {page + 1}/{total_pages}")
+    # user_input = input("Press 'q' to quit, 'n' for next page: ")
+    return
+
+def interactive_mode():
+    last=""
+    results=[]
+    pagenumber, max_pages = 0, 0
+    global command
+    # print(sys.argv)
+    #if this script was called without args, display last results.
+    #otherwise start search with arg provided
+    if len(sys.argv) == 1:
+        command = last_search
+        print("Searching last query: '"+ command +"'")
+    else:
+        command = sys.argv[1]
+    results = get_search_results(command)
+    save_last_search(command)
+    print_nicely(results, pagenumber)
+    
     while True:
-        print('\n'.join(formatted_hostnames[current_page * max_results: (current_page + 1) * max_results]))
-        print(f"Page {current_page + 1}/{total_pages}")
-        user_input = input("Press 'q' to quit, 'n' for next page: ")
-        if user_input.lower() == 'q':
-            break
-        elif user_input.lower() == 'n':
-            current_page = (current_page + 1) % total_pages
-        elif user_input.lower().startswith("g "):
-            global command 
-            command = user_input
-            break
-        #if input is a number, choose from the search results and spawn ssh
-        elif re.match("(\d){1,2}", user_input): #regex
+        command = input("Press 'q' to quit, 'n' for next page: ")#TODO, Make this print fun messages
+        max_pages = math.ceil(len(results) / max_results)
+        if command.lower() == 'n' or command == "":
+            if pagenumber+1 >= max_pages:
+                pagenumber = 0
+            else:
+                pagenumber+=1
+
+        elif command.lower().startswith("g "):
+            last = ""
+            pagenumber = 0
+            command = command.split("g ")[1]
+            save_last_search(command)
+            results = get_search_results(command)
+        
+        #if input is q, exit program
+        elif command == 'q':
+            exit()
+        elif re.match("(\d){1,2}", command): #regex
             #spawn ssh session now of that selection
-            choice = int(user_input)
+            choice = int(command)
             if 0 <= choice <= len(results):
                 ip = results[choice-1][1]
                 sshcommand = "ssh"
@@ -97,54 +160,14 @@ def print_nicely(results):
                 if ssh_post_options != "":
                     sshcommand = sshcommand + " " + ssh_post_options
                 sshcommand += " " + ip
-
-                subprocess.run(sshcommand, shell=True)
-            
-        else:
-            print("Invalid input. Please press 'q' to quit or 'n' for next page.")        
-    return
-
-def interactive_mode():
-    last=""
-    results=[]
-    global command
-    # print(sys.argv)
-    #if this script was called without args, display last results.
-    #otherwise start search with arg provided
-    if len(sys.argv) == 1:
-        # Display last results
-        #TODO
-        # command="last"
-        pass
-    else:
-        command = sys.argv[1]
-    
-    while True:
-        if command == 'help':
-            # Edit settings here
-            pass
-
-        elif command.lower().startswith("g "):
-            last = ""
-            command = command.split("g ")[1]
-            results = get_search_results(command)
-        
-        #if input is q, exit program
-        elif command == 'q':
-            exit()
-        
-        
-
-        elif command == "last": #regex
-            #print last results
-            print("Printing last search")
-            pass
-
+            print("Connecting to "+results[choice-1][0]+"...")    
+            subprocess.run(sshcommand, shell=True)
         else:
             #refine search further
             if last != "":
                 results = get_search_results(last + "/" + command)
             else:
+                save_last_search(command)
                 results = get_search_results(command)
         #add the input to last, keeps track of the search
         #if its not the first search ""
@@ -152,11 +175,10 @@ def interactive_mode():
             last = last+"/"+command
         else:
             last = command
-        #optional: cap the amount of results to a certain number
-        if command.startswith("g "):
-            command = input("Enter command: ")
-        print_nicely(results)
-        
+
+        print_nicely(results, pagenumber)
+
+
         # # debugging
         # print("Last is: "+last )
         # print("Cmmd is: "+command )

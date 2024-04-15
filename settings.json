@@ -1,8 +1,1 @@
-{
-    "lastsearch": "ani",
-    "hosts_file_path": "~/gscript/hosts",
-    "wildcard_character": "/",
-    "max_results": 25,
-    "ssh_pre_options": "ct",
-    "ssh_post_options": ""
-}
+{"lastsearch": "test", "hosts_file_path": "~/gscript/hosts", "wildcard_character": "/", "max_results": 25, "ssh_pre_options": "ct", "ssh_post_options": ""}
