@@ -10,11 +10,12 @@ import math
 import os
 #python doesnt interpret '~', bash does that. not python
 config_path ="settings.json"
-
+#the json and g.py live next to each other
+config_path = os.path.dirname(__file__)+ "/" + config_path
 
 #TODO prompt the user if the file doesnt exist and do whole new settings setup
 # Read JSON data from file
-with open(os.path.dirname(__file__)+ "/" + config_path, 'r') as file:
+with open(config_path, 'r') as file:
     json_data = json.load(file)
 
 # print(json_data)
@@ -84,7 +85,7 @@ def save_last_search(query):
     settings['lastsearch'] = query
 
     # Save the updated settings back to settings.json
-    with open('settings.json', 'w') as file:
+    with open(config_path, 'w') as file:
         json.dump(settings, file)
 
 ##
