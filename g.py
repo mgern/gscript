@@ -26,6 +26,7 @@ wildcard_character = json_data["wildcard_character"]
 max_results = json_data["max_results"]
 ssh_pre_options = json_data["ssh_pre_options"]
 ssh_post_options = json_data["ssh_post_options"]
+connect_automatically_on_one_result = json_data["connect_automatically_on_one_result"]
 
 #needs to be global cause its used everywhere
 command=last_search
@@ -131,6 +132,8 @@ def interactive_mode():
     print_nicely(results, pagenumber)
     
     while True:
+        #if one result, auto connect to it #TODO
+        
         command = input("Press 'q' to quit, 'n' for next page: ")#TODO, Make this print fun messages
         max_pages = math.ceil(len(results) / max_results)
         if command.lower() == 'n' or command == "":
@@ -139,6 +142,7 @@ def interactive_mode():
             else:
                 pagenumber+=1
 
+        #reset search and start anew if you type 'g <search query>'
         elif command.lower().startswith("g "):
             last = ""
             pagenumber = 0
@@ -149,6 +153,8 @@ def interactive_mode():
         #if input is q, exit program
         elif command == 'q':
             exit()
+
+        #user inputs '3' or another number to select the host to connect to 
         elif re.match("(\d){1,2}", command): #regex
             #spawn ssh session now of that selection
             choice = int(command)
