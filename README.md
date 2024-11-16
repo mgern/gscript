@@ -10,6 +10,12 @@ No more clicking around in a massive SecureCRT or Mobaxterm tree
 
 
 # FAQ:
+## 0. How to install?
+Download g.py, add an alias to it or somehow get it into your PATH
+Make a windows hosts style file full of your hostnames and IPs. Point it to that in settings.json
+
+If you want to change anything, just do it, it's Python after all.
+
 ## 1. How does it work?
 It's a python loop that does Regex and provides the user with a selection of search results, which then just executes SSH in your environment (Windows, linux, anything)
 
